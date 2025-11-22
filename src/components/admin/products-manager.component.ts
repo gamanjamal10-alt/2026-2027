@@ -3,187 +3,258 @@ import { Component, inject, signal } from '@angular/core';
 import { DataService, Product, ProductVideo } from '../../services/data.service';
 import { GeminiService } from '../../services/gemini.service';
 import { FormsModule } from '@angular/forms';
-import { NgOptimizedImage } from '@angular/common';
+import { NgOptimizedImage, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-products-manager',
   standalone: true,
-  imports: [FormsModule, NgOptimizedImage],
+  imports: [FormsModule, NgClass],
   template: `
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">المنتجات</h1>
-      <button (click)="openModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 flex items-center gap-2">
+      <button (click)="openModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 flex items-center gap-2 shadow">
         <span>+</span> إضافة منتج
       </button>
     </div>
 
-    <!-- Product Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      @for (product of dataService.products(); track product.id) {
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4" [class.opacity-60]="!product.isVisible">
-          <div class="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative">
-             @if (product.image.startsWith('data:')) {
-                <img [src]="product.image" class="w-full h-full object-cover" alt="Product">
-             } @else {
-                <img [ngSrc]="product.image" width="96" height="96" class="w-full h-full object-cover" alt="Product">
-             }
-             @if (!product.isVisible) {
-               <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xs font-bold">مخفي</div>
-             }
-          </div>
-          <div class="flex-grow">
-             <h3 class="font-bold text-gray-800 mb-1">{{ product.name }}</h3>
-             <div class="text-sm text-emerald-600 font-bold mb-2">{{ product.price }} د.ج</div>
-             @if (product.videos?.length) {
-                <div class="text-xs text-purple-600 bg-purple-50 inline-block px-2 py-1 rounded mb-2">
-                  🎥 {{product.videos?.length}} فيديو
-                </div>
-             }
-             <div class="flex gap-2 mt-auto">
-               <button (click)="editProduct(product)" class="text-blue-600 text-sm bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">تعديل</button>
-               <button (click)="deleteProduct(product.id)" class="text-red-600 text-sm bg-red-50 px-3 py-1 rounded hover:bg-red-100">حذف</button>
-             </div>
-          </div>
-        </div>
-      }
+    <!-- Products Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-right">
+          <thead class="bg-gray-50 text-gray-600 font-medium">
+            <tr>
+              <th class="p-4">الصورة</th>
+              <th class="p-4">اسم المنتج</th>
+              <th class="p-4">السعر</th>
+              <th class="p-4">المخزون</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of dataService.products(); track product.id) {
+              <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                <td class="p-4">
+                  <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                    <img [src]="product.image" class="w-full h-full object-cover" alt="Product">
+                  </div>
+                </td>
+                <td class="p-4 font-medium text-gray-900">
+                   {{ product.name }}
+                   <div class="text-xs text-gray-500">{{ product.category }}</div>
+                </td>
+                <td class="p-4 font-bold text-emerald-600">{{ product.price }} د.ج</td>
+                <td class="p-4">
+                  <span [class]="product.stock > 10 ? 'text-green-600' : 'text-red-600'" class="font-bold">
+                    {{ product.stock }}
+                  </span>
+                </td>
+                <td class="p-4">
+                   <button 
+                     (click)="toggleVisibility(product)"
+                     [class]="product.isVisible ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'"
+                     class="px-3 py-1 rounded-full text-xs font-bold transition hover:opacity-80"
+                   >
+                     {{ product.isVisible ? 'ظاهر' : 'مخفي' }}
+                   </button>
+                </td>
+                <td class="p-4 flex gap-2">
+                  <button (click)="editProduct(product)" class="text-blue-500 hover:bg-blue-50 p-2 rounded transition">تعديل</button>
+                  <button (click)="deleteProduct(product.id)" class="text-red-500 hover:bg-red-50 p-2 rounded transition">حذف</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">لا توجد منتجات حالياً.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Modal -->
     @if (isModalOpen()) {
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-          <h2 class="text-xl font-bold mb-4">{{ isEditing() ? 'تعديل منتج' : 'إضافة منتج جديد' }}</h2>
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+            <h2 class="text-xl font-bold text-gray-800">{{ isEditing() ? 'تعديل المنتج' : 'إضافة منتج جديد' }}</h2>
+            <button (click)="closeModal()" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
           
-          <form (ngSubmit)="saveProduct()">
-             <!-- Visibility Toggle -->
-             <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded border">
-                <span class="font-bold text-gray-700">حالة المنتج</span>
-                <label class="flex items-center gap-2 cursor-pointer">
-                   <input type="checkbox" [(ngModel)]="currentProduct.isVisible" name="isVisible" class="w-5 h-5 text-emerald-600 rounded">
-                   <span class="text-sm">{{ currentProduct.isVisible ? 'مرئي للزبائن' : 'مخفي' }}</span>
-                </label>
-             </div>
+          <div class="p-6">
+            <form (ngSubmit)="saveProduct()">
+              
+              <div class="grid md:grid-cols-2 gap-8">
+                <!-- Left Column: Basic Info -->
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم المنتج</label>
+                    <input type="text" [(ngModel)]="currentProduct.name" name="name" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition" required>
+                  </div>
 
-             <!-- Basic Info -->
-             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-               <div>
-                 <label class="block text-sm font-medium mb-1">اسم المنتج</label>
-                 <input type="text" [(ngModel)]="currentProduct.name" name="name" class="w-full p-2 border rounded" required>
-               </div>
-               <div>
-                 <label class="block text-sm font-medium mb-1">الفئة</label>
-                 <input type="text" [(ngModel)]="currentProduct.category" name="category" class="w-full p-2 border rounded" required>
-               </div>
-               <div>
-                 <label class="block text-sm font-medium mb-1">السعر</label>
-                 <input type="number" [(ngModel)]="currentProduct.price" name="price" class="w-full p-2 border rounded" required>
-               </div>
-               <div>
-                 <label class="block text-sm font-medium mb-1">سعر التخفيض (اختياري)</label>
-                 <input type="number" [(ngModel)]="currentProduct.discountPrice" name="discountPrice" class="w-full p-2 border rounded">
-               </div>
-             </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">الفئة</label>
+                    <select [(ngModel)]="currentProduct.category" name="category" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                      <option value="إلكترونيات">إلكترونيات</option>
+                      <option value="ملابس">ملابس</option>
+                      <option value="منزل">منزل</option>
+                      <option value="عناية شخصية">عناية شخصية</option>
+                      <option value="حقائب">حقائب</option>
+                      <option value="أخرى">أخرى</option>
+                    </select>
+                  </div>
 
-             <div class="mb-4">
-               <label class="block text-sm font-medium mb-1">صورة المنتج</label>
-               <div class="flex gap-2 mb-2 text-sm">
-                 <button type="button" (click)="imageInputType='link'" [class]="imageInputType==='link' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'" class="flex-1 py-1 rounded border transition">رابط خارجي</button>
-                 <button type="button" (click)="imageInputType='file'" [class]="imageInputType==='file' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'" class="flex-1 py-1 rounded border transition">رفع صورة</button>
-               </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">السعر (د.ج)</label>
+                      <input type="number" [(ngModel)]="currentProduct.price" name="price" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition" required>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">سعر التخفيض (اختياري)</label>
+                      <input type="number" [(ngModel)]="currentProduct.discountPrice" name="discountPrice" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    </div>
+                  </div>
 
-               @if (imageInputType === 'link') {
-                 <input type="text" [(ngModel)]="currentProduct.image" name="image" placeholder="https://..." class="w-full p-2 border rounded">
-               } @else {
-                  <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
-                    <input type="file" (change)="onImageFileSelected($event)" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                    <div class="flex flex-col items-center gap-2 text-gray-500">
-                       @if (imageUploadProgress > 0 && imageUploadProgress < 100) {
-                         <span class="text-emerald-600 font-bold">جارٍ الرفع... {{imageUploadProgress}}%</span>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">المخزون</label>
+                    <input type="number" [(ngModel)]="currentProduct.stock" name="stock" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition" required>
+                  </div>
+
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="block text-sm font-medium text-gray-700">الوصف</label>
+                      <button type="button" (click)="generateDescription()" [disabled]="isGeneratingDesc()" class="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 disabled:opacity-50">
+                        @if (isGeneratingDesc()) {
+                           <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        } @else {
+                           ✨ توليد بالذكاء الاصطناعي
+                        }
+                      </button>
+                    </div>
+                    <textarea [(ngModel)]="currentProduct.description" name="description" rows="4" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition" required></textarea>
+                  </div>
+                  
+                  <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                      <div class="relative inline-flex items-center">
+                        <input type="checkbox" [(ngModel)]="currentProduct.isVisible" name="isVisible" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                      </div>
+                      <span class="text-sm font-medium text-gray-700">المنتج ظاهر في المتجر</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Right Column: Media & Variants -->
+                <div class="space-y-6">
+                  
+                  <!-- Image Upload Section -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">صورة المنتج الرئيسية</label>
+                    
+                    <div class="flex gap-4 mb-2 text-sm">
+                      <button type="button" (click)="imageMode.set('upload')" [class]="imageMode() === 'upload' ? 'text-emerald-600 border-b-2 border-emerald-600 font-bold' : 'text-gray-500'">رفع صورة</button>
+                      <button type="button" (click)="imageMode.set('url')" [class]="imageMode() === 'url' ? 'text-emerald-600 border-b-2 border-emerald-600 font-bold' : 'text-gray-500'">رابط خارجي</button>
+                    </div>
+
+                    @if (imageMode() === 'upload') {
+                      <div 
+                        class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition cursor-pointer relative group"
+                        (click)="fileInput.click()"
+                      >
+                        <input 
+                          #fileInput 
+                          type="file" 
+                          (change)="onFileSelected($event)" 
+                          accept="image/*" 
+                          class="hidden"
+                        >
+                        @if (currentProduct.image && currentProduct.image.startsWith('data:')) {
+                           <img [src]="currentProduct.image" class="mx-auto h-40 object-contain mb-2 rounded shadow-sm">
+                           <p class="text-xs text-gray-500">انقر لتغيير الصورة</p>
+                        } @else {
+                           <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                           <p class="text-sm text-gray-600 font-medium">اضغط هنا لرفع صورة</p>
+                           <p class="text-xs text-gray-400">PNG, JPG, WEBP (Max 2MB)</p>
+                        }
+                      </div>
+                    } @else {
+                      <input type="text" [(ngModel)]="currentProduct.image" name="image" placeholder="https://example.com/image.jpg" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                      @if(currentProduct.image && !currentProduct.image.startsWith('data:')) {
+                        <div class="mt-2 h-40 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                           <img [src]="currentProduct.image" class="w-full h-full object-contain" alt="Preview">
+                        </div>
+                      }
+                    }
+                  </div>
+
+                  <!-- Colors -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">الألوان المتاحة</label>
+                    <div class="flex gap-2 mb-2">
+                      <input #colorInput type="text" placeholder="أضف لون (مثلاً: أحمر)" class="flex-grow p-2 border border-gray-200 rounded-lg text-sm outline-none" (keydown.enter)="addColor(colorInput.value); colorInput.value = ''; $event.preventDefault()">
+                      <button type="button" (click)="addColor(colorInput.value); colorInput.value = ''" class="bg-gray-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">+</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      @for (color of currentProduct.colors; track color) {
+                        <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                          {{ color }}
+                          <button type="button" (click)="removeColor(color)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Videos Section -->
+                  <div class="border-t border-gray-100 pt-4">
+                    <h3 class="font-bold text-sm text-gray-800 mb-3">الفيديوهات</h3>
+                    
+                    <!-- Current Videos List -->
+                    <div class="space-y-2 mb-4">
+                       @for (video of currentProduct.videos; track video.id) {
+                         <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200 text-sm">
+                            <div class="flex items-center gap-2 truncate">
+                               <span class="text-xs bg-gray-200 px-1 rounded">{{ video.type === 'file' ? 'File' : 'Link' }}</span>
+                               <span class="truncate max-w-[150px]">{{ video.name }}</span>
+                            </div>
+                            <button type="button" (click)="removeVideo(video.id)" class="text-red-500 hover:bg-red-100 p-1 rounded">حذف</button>
+                         </div>
+                       }
+                    </div>
+
+                    <!-- Add Video UI -->
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                       <div class="flex gap-2 mb-2 text-xs">
+                          <button type="button" (click)="videoMode.set('link')" [class.font-bold]="videoMode() === 'link'" [class.text-emerald-600]="videoMode() === 'link'">رابط</button>
+                          <span class="text-gray-300">|</span>
+                          <button type="button" (click)="videoMode.set('file')" [class.font-bold]="videoMode() === 'file'" [class.text-emerald-600]="videoMode() === 'file'">رفع ملف</button>
+                       </div>
+                       
+                       @if (videoMode() === 'link') {
+                          <input #videoLinkInput type="text" placeholder="رابط يوتيوب / تيك توك" class="w-full p-2 border rounded text-sm mb-2 outline-none">
+                          <button type="button" (click)="addVideoLink(videoLinkInput.value); videoLinkInput.value=''" class="w-full bg-blue-600 text-white py-1 rounded text-sm">إضافة الرابط</button>
                        } @else {
-                         <span>اضغط لاختيار صورة من جهازك</span>
+                          <input #videoFileInput type="file" accept="video/*" class="w-full text-xs mb-2">
+                          <button type="button" (click)="addVideoFile(videoFileInput)" class="w-full bg-blue-600 text-white py-1 rounded text-sm">رفع الفيديو</button>
                        }
                     </div>
                   </div>
-               }
 
-               @if (currentProduct.image) {
-                 <div class="mt-3 p-2 border rounded bg-gray-50 text-center">
-                    <p class="text-xs text-gray-500 mb-1">معاينة:</p>
-                    <img [src]="currentProduct.image" class="h-32 mx-auto object-contain rounded bg-white border" alt="Preview">
-                 </div>
-               }
-             </div>
-
-             <div class="mb-4">
-                <div class="flex justify-between items-center mb-1">
-                   <label class="block text-sm font-medium">الوصف</label>
-                   <button 
-                     type="button" 
-                     (click)="generateDescription()" 
-                     [disabled]="isGenerating() || !currentProduct.name"
-                     class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-purple-200"
-                   >
-                     @if (isGenerating()) { <span>...</span> } @else { 
-                       توليد بالذكاء الاصطناعي 
-                     }
-                   </button>
                 </div>
-                <textarea [(ngModel)]="currentProduct.description" name="description" rows="3" class="w-full p-2 border rounded"></textarea>
-             </div>
+              </div>
 
-             <!-- Video Section -->
-             <div class="mb-6 border-t pt-4">
-               <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                 قسم الفيديوهات
-               </h3>
-               
-               <!-- Add Video Form -->
-               <div class="bg-gray-50 p-3 rounded border mb-3">
-                  <div class="flex gap-2 mb-2 text-sm">
-                    <button type="button" (click)="videoInputType='link'" [class]="videoInputType==='link' ? 'bg-white shadow text-purple-700' : 'text-gray-500'" class="flex-1 py-1 rounded transition">رابط (YouTube/TikTok)</button>
-                    <button type="button" (click)="videoInputType='file'" [class]="videoInputType==='file' ? 'bg-white shadow text-purple-700' : 'text-gray-500'" class="flex-1 py-1 rounded transition">رفع ملف (MP4)</button>
-                  </div>
+              <div class="mt-8 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button type="button" (click)="closeModal()" class="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">إلغاء</button>
+                <button type="submit" class="px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">
+                  {{ isEditing() ? 'حفظ التعديلات' : 'إضافة المنتج' }}
+                </button>
+              </div>
 
-                  @if (videoInputType === 'link') {
-                    <div class="flex gap-2">
-                      <input type="text" [(ngModel)]="newVideoUrl" name="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="flex-grow p-2 border rounded text-sm">
-                      <button type="button" (click)="addVideoLink()" class="bg-purple-600 text-white px-3 rounded text-sm">إضافة</button>
-                    </div>
-                  } @else {
-                    <div class="flex gap-2 items-center">
-                      <input type="file" (change)="onFileSelected($event)" accept="video/*" class="flex-grow text-sm">
-                    </div>
-                    @if (uploadProgress > 0) {
-                      <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                        <div class="bg-purple-600 h-1.5 rounded-full" [style.width.%]="uploadProgress"></div>
-                      </div>
-                    }
-                  }
-               </div>
-
-               <!-- Video List -->
-               @if (currentProduct.videos && currentProduct.videos.length > 0) {
-                 <div class="space-y-2">
-                   @for (video of currentProduct.videos; track video.id) {
-                     <div class="flex items-center justify-between bg-white border p-2 rounded shadow-sm">
-                       <div class="flex items-center gap-2 overflow-hidden">
-                         <span class="text-sm truncate max-w-[200px]">{{ video.name }}</span>
-                         <span class="text-xs text-gray-400 border border-gray-200 px-1 rounded">{{ video.type === 'file' ? 'ملف' : 'رابط' }}</span>
-                       </div>
-                       <button type="button" (click)="removeVideo(video.id)" class="text-red-500 hover:bg-red-50 p-1 rounded">
-                          حذف
-                       </button>
-                     </div>
-                   }
-                 </div>
-               }
-             </div>
-
-             <div class="flex justify-end gap-2 mt-4">
-               <button type="button" (click)="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">إلغاء</button>
-               <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700">حفظ</button>
-             </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     }
@@ -195,23 +266,21 @@ export class ProductsManagerComponent {
 
   isModalOpen = signal(false);
   isEditing = signal(false);
-  isGenerating = signal(false);
-
-  imageInputType: 'link' | 'file' = 'link';
-  imageUploadProgress = 0;
-
-  videoInputType: 'link' | 'file' = 'link';
-  newVideoUrl = '';
-  uploadProgress = 0;
+  isGeneratingDesc = signal(false);
+  
+  // UI Modes
+  imageMode = signal<'upload' | 'url'>('upload');
+  videoMode = signal<'link' | 'file'>('link');
 
   defaultProduct: Product = {
     id: '',
     name: '',
-    category: '',
-    price: 0,
     description: '',
-    image: 'https://picsum.photos/300/300',
-    stock: 10,
+    price: 0,
+    category: 'إلكترونيات',
+    image: '',
+    stock: 0,
+    colors: [],
     videos: [],
     isVisible: true
   };
@@ -220,30 +289,32 @@ export class ProductsManagerComponent {
 
   openModal() {
     this.isEditing.set(false);
-    this.currentProduct = { ...this.defaultProduct, id: Date.now().toString(), videos: [] };
+    this.currentProduct = { ...this.defaultProduct, id: Date.now().toString() };
+    this.imageMode.set('upload'); // Default
     this.isModalOpen.set(true);
-    this.resetForm();
   }
 
-  editProduct(p: Product) {
+  editProduct(product: Product) {
     this.isEditing.set(true);
-    this.currentProduct = { ...p, videos: p.videos ? [...p.videos] : [] };
-    this.isModalOpen.set(true);
-    this.resetForm();
+    // Clone to avoid direct mutation before save
+    this.currentProduct = { 
+      ...product, 
+      colors: [...(product.colors || [])],
+      videos: [...(product.videos || [])]
+    };
     
-    if (p.image && p.image.startsWith('data:')) {
-      this.imageInputType = 'file';
+    // Detect image type
+    if (this.currentProduct.image.startsWith('data:')) {
+      this.imageMode.set('upload');
+    } else {
+      this.imageMode.set('url');
     }
+    
+    this.isModalOpen.set(true);
   }
 
   closeModal() {
     this.isModalOpen.set(false);
-  }
-
-  deleteProduct(id: string) {
-    if(confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-      this.dataService.deleteProduct(id);
-    }
   }
 
   saveProduct() {
@@ -255,77 +326,98 @@ export class ProductsManagerComponent {
     this.closeModal();
   }
 
+  deleteProduct(id: string) {
+    if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+      this.dataService.deleteProduct(id);
+    }
+  }
+  
+  toggleVisibility(product: Product) {
+     const updated = { ...product, isVisible: !product.isVisible };
+     this.dataService.updateProduct(updated);
+  }
+
+  // Colors
+  addColor(color: string) {
+    if (color.trim()) {
+      if (!this.currentProduct.colors) this.currentProduct.colors = [];
+      this.currentProduct.colors.push(color.trim());
+    }
+  }
+
+  removeColor(color: string) {
+    this.currentProduct.colors = this.currentProduct.colors?.filter(c => c !== color);
+  }
+
+  // AI Description
   async generateDescription() {
-    if (!this.currentProduct.name) return;
-    this.isGenerating.set(true);
-    const desc = await this.geminiService.generateProductDescription(this.currentProduct.name, this.currentProduct.category);
+    if (!this.currentProduct.name) {
+      alert('أدخل اسم المنتج أولاً');
+      return;
+    }
+    this.isGeneratingDesc.set(true);
+    const desc = await this.geminiService.generateProductDescription(
+      this.currentProduct.name, 
+      this.currentProduct.category
+    );
     this.currentProduct.description = desc;
-    this.isGenerating.set(false);
+    this.isGeneratingDesc.set(false);
   }
 
-  resetForm() {
-    this.newVideoUrl = '';
-    this.videoInputType = 'link';
-    this.uploadProgress = 0;
-    this.imageInputType = 'link';
-    this.imageUploadProgress = 0;
-  }
-
-  onImageFileSelected(event: any) {
+  // Image Handling
+  onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
-      this.imageUploadProgress = 10;
+      if (file.size > 2 * 1024 * 1024) { // 2MB Limit
+         alert('حجم الصورة كبير جداً. يرجى اختيار صورة أقل من 2 ميجابايت.');
+         return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e: any) => {
-        this.imageUploadProgress = 100;
         this.currentProduct.image = e.target.result;
-        setTimeout(() => this.imageUploadProgress = 0, 500);
       };
       reader.readAsDataURL(file);
     }
   }
 
-  addVideoLink() {
-    if (!this.newVideoUrl) return;
-    
-    const newVideo: ProductVideo = {
-      id: 'VID-' + Date.now(),
-      type: 'link',
-      url: this.newVideoUrl,
-      name: 'فيديو خارجي ' + ((this.currentProduct.videos?.length || 0) + 1),
-      platform: 'youtube'
-    };
-
-    this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
-    this.newVideoUrl = '';
+  // Video Handling
+  addVideoLink(url: string) {
+     if (!url) return;
+     const newVideo: ProductVideo = {
+        id: Date.now().toString(),
+        type: 'link',
+        url: url,
+        name: 'فيديو خارجي',
+        platform: url.includes('youtube') ? 'youtube' : 'other'
+     };
+     this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.uploadProgress = 10;
-      const interval = setInterval(() => {
-        this.uploadProgress += 20;
-        if (this.uploadProgress >= 100) {
-          clearInterval(interval);
-          
-          const newVideo: ProductVideo = {
-            id: 'VID-' + Date.now(),
-            type: 'file',
-            url: URL.createObjectURL(file),
-            name: file.name,
-            size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
-          };
-          
-          this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
-          this.uploadProgress = 0;
-          event.target.value = '';
+  addVideoFile(input: HTMLInputElement) {
+     const file = input.files?.[0];
+     if (file) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit for demo
+           alert('الفيديو كبير جداً للعرض التوضيحي (الحد الأقصى 10 ميجا).');
+           return;
         }
-      }, 300);
-    }
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+           const newVideo: ProductVideo = {
+              id: Date.now().toString(),
+              type: 'file',
+              url: e.target.result,
+              name: file.name,
+              size: (file.size / 1024 / 1024).toFixed(1) + ' MB'
+           };
+           this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
+           input.value = ''; // reset
+        };
+        reader.readAsDataURL(file);
+     }
   }
 
   removeVideo(id: string) {
-    this.currentProduct.videos = this.currentProduct.videos?.filter(v => v.id !== id);
+     this.currentProduct.videos = this.currentProduct.videos?.filter(v => v.id !== id);
   }
 }
