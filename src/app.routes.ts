@@ -6,6 +6,7 @@ import { ProductDetailComponent } from './components/shop/product-detail.compone
 import { CartComponent } from './components/shop/cart.component';
 import { CheckoutComponent } from './components/shop/checkout.component';
 import { TrackingComponent } from './components/shop/tracking.component';
+import { LandingPageComponent } from './components/shop/landing-page.component';
 import { AdminLayoutComponent } from './components/admin/admin-layout.component';
 import { DashboardComponent } from './components/admin/dashboard.component';
 import { ProductsManagerComponent } from './components/admin/products-manager.component';
@@ -13,6 +14,9 @@ import { OrdersManagerComponent } from './components/admin/orders-manager.compon
 import { AdminLoginComponent } from './components/admin/login.component';
 import { VideoManagerComponent } from './components/admin/video-manager.component';
 import { VideoSettingsComponent } from './components/admin/video-settings.component';
+import { AnalyticsComponent } from './components/admin/analytics.component';
+import { DeliverySettingsComponent } from './components/admin/delivery-settings.component';
+import { LandingPagesManagerComponent } from './components/admin/landing-pages-manager.component';
 
 export const routes: Routes = [
   {
@@ -26,14 +30,18 @@ export const routes: Routes = [
       { path: 'tracking', component: TrackingComponent },
     ]
   },
+  { path: 'promo/:slug', component: LandingPageComponent },
   {
     path: 'admin',
     component: AdminLayoutComponent,
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'analytics', component: AnalyticsComponent },
       { path: 'products', component: ProductsManagerComponent },
       { path: 'orders', component: OrdersManagerComponent },
+      { path: 'delivery', component: DeliverySettingsComponent },
+      { path: 'landing-pages', component: LandingPagesManagerComponent },
       { path: 'videos', component: VideoManagerComponent },
       { path: 'video-settings', component: VideoSettingsComponent },
     ]

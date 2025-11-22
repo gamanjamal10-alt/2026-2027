@@ -2,14 +2,14 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Product, ProductVideo } from '../../services/data.service';
-import { NgOptimizedImage, NgClass } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [NgOptimizedImage, FormsModule, RouterLink, NgClass],
+  imports: [NgOptimizedImage, FormsModule, RouterLink],
   template: `
     @if (product(); as p) {
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto mt-6">
@@ -165,7 +165,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 export class ProductDetailComponent {
   private route: ActivatedRoute = inject(ActivatedRoute);
   dataService = inject(DataService);
-  sanitizer = inject(DomSanitizer);
+  sanitizer: DomSanitizer = inject(DomSanitizer);
 
   product = signal<Product | undefined>(undefined);
   quantity = signal(1);

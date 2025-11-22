@@ -1,5 +1,5 @@
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { DataService } from '../../services/data.service';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -45,7 +45,7 @@ import { NgClass } from '@angular/common';
                 <label class="block text-sm font-medium text-gray-700 mb-2">الولاية (التقسيم الإداري الجديد)</label>
                 <select formControlName="wilaya" class="w-full p-3 border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
                   <option value="" disabled>اختر الولاية</option>
-                  @for (w of wilayas; track w.id) {
+                  @for (w of dataService.wilayas; track w.id) {
                     <option [value]="w.id + ' - ' + w.name">{{ w.id }} - {{ w.name }}</option>
                   }
                 </select>
@@ -71,9 +71,19 @@ import { NgClass } from '@angular/common';
                    <span>{{ (item.product.discountPrice || item.product.price) * item.quantity }} د.ج</span>
                 </div>
               }
-              <div class="border-t border-gray-200 mt-3 pt-2 flex justify-between font-bold text-lg">
-                <span>المجموع الكلي + التوصيل</span>
-                <span class="text-emerald-600">{{ dataService.cartTotal() }} د.ج</span>
+              
+              <div class="border-t border-gray-200 mt-3 pt-2 text-sm flex justify-between">
+                 <span>المجموع الفرعي</span>
+                 <span class="font-medium">{{ dataService.cartSubtotal() }} د.ج</span>
+              </div>
+              <div class="flex justify-between text-sm mt-1">
+                 <span>تكلفة التوصيل</span>
+                 <span class="font-medium text-blue-600">{{ shippingCost() }} د.ج</span>
+              </div>
+              
+              <div class="border-t border-gray-300 mt-2 pt-2 flex justify-between font-bold text-lg">
+                <span>الإجمالي</span>
+                <span class="text-emerald-600">{{ dataService.cartSubtotal() + shippingCost() }} د.ج</span>
               </div>
               <p class="text-xs text-gray-500 mt-1">* الدفع نقداً عند الاستلام فقط</p>
             </div>
@@ -88,7 +98,7 @@ import { NgClass } from '@angular/common';
                 <svg class="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 جارٍ المعالجة...
               } @else {
-                تأكيد الطلب (الدفع عند الاستلام)
+                تأكيد الطلب ({{ dataService.cartSubtotal() + shippingCost() }} د.ج)
               }
             </button>
           </form>
@@ -131,38 +141,39 @@ export class CheckoutComponent {
     address: ['', Validators.required]
   });
 
-  wilayas = [
-    { id: '01', name: 'أدرار' }, { id: '02', name: 'الشلف' }, { id: '03', name: 'الأغواط' }, { id: '04', name: 'أم البواقي' },
-    { id: '05', name: 'باتنة' }, { id: '06', name: 'بجاية' }, { id: '07', name: 'بسكرة' }, { id: '08', name: 'بشار' },
-    { id: '09', name: 'البليدة' }, { id: '10', name: 'البويرة' }, { id: '11', name: 'تمنراست' }, { id: '12', name: 'تبسة' },
-    { id: '13', name: 'تلمسان' }, { id: '14', name: 'تيارت' }, { id: '15', name: 'تيزي وزو' }, { id: '16', name: 'الجزائر' },
-    { id: '17', name: 'الجلفة' }, { id: '18', name: 'جيجل' }, { id: '19', name: 'سطيف' }, { id: '20', name: 'سعيدة' },
-    { id: '21', name: 'سكيكدة' }, { id: '22', name: 'سيدي بلعباس' }, { id: '23', name: 'عنابة' }, { id: '24', name: 'قالمة' },
-    { id: '25', name: 'قسنطينة' }, { id: '26', name: 'المدية' }, { id: '27', name: 'مستغانم' }, { id: '28', name: 'المسيلة' },
-    { id: '29', name: 'معسكر' }, { id: '30', name: 'ورقلة' }, { id: '31', name: 'وهران' }, { id: '32', name: 'البيض' },
-    { id: '33', name: 'إليزي' }, { id: '34', name: 'برج بوعريريج' }, { id: '35', name: 'بومرداس' }, { id: '36', name: 'الطارف' },
-    { id: '37', name: 'تندوف' }, { id: '38', name: 'تيسمسيلت' }, { id: '39', name: 'الوادي' }, { id: '40', name: 'خنشلة' },
-    { id: '41', name: 'سوق أهراس' }, { id: '42', name: 'تيبازة' }, { id: '43', name: 'ميلة' }, { id: '44', name: 'عين الدفلى' },
-    { id: '45', name: 'النعامة' }, { id: '46', name: 'عين تموشنت' }, { id: '47', name: 'غرداية' }, { id: '48', name: 'غليزان' },
-    { id: '49', name: 'تيميمون' }, { id: '50', name: 'برج باجي مختار' }, { id: '51', name: 'أولاد جلال' }, { id: '52', name: 'بني عباس' },
-    { id: '53', name: 'عين صالح' }, { id: '54', name: 'عين قزام' }, { id: '55', name: 'تقرت' }, { id: '56', name: 'جانت' },
-    { id: '57', name: 'المغير' }, { id: '58', name: 'المنيعة' },
-    // Placeholder for new divisions to reach 69
-    { id: '59', name: 'بوسعادة (مقترح)' }, { id: '60', name: 'بريكة (مقترح)' }, { id: '61', name: 'الشريعة (مقترح)' }, 
-    { id: '62', name: 'مسعد (مقترح)' }, { id: '63', name: 'العلمة (مقترح)' }, { id: '64', name: 'عين وسارة (مقترح)' },
-    { id: '65', name: 'أفلو (مقترح)' }, { id: '66', name: 'عين البيضاء (مقترح)' }, { id: '67', name: 'تنس (مقترح)' },
-    { id: '68', name: 'الأبيض سيدي الشيخ (مقترح)' }, { id: '69', name: 'القرارة (مقترح)' }
-  ];
+  // Computed shipping cost based on selected Wilaya
+  shippingCost = computed(() => {
+    const wilayaValue = this.checkoutForm.controls['wilaya'].value;
+    if (!wilayaValue) return this.dataService.deliverySettings().globalPrice;
+    
+    // Parse ID from "01 - Adrar"
+    const wilayaId = wilayaValue.split(' - ')[0];
+    return this.dataService.getShippingPrice(wilayaId);
+  });
+
+  constructor() {
+    // React to changes to update view if needed (though computed handles it)
+    this.checkoutForm.get('wilaya')?.valueChanges.subscribe(() => {
+        // Trigger change detection implicitly via signal read in template
+    });
+  }
 
   onSubmit() {
     if (this.checkoutForm.valid) {
       this.isSubmitting.set(true);
       setTimeout(() => {
         const val = this.checkoutForm.value;
+        
+        // Parse ID and Name
+        const wilayaStr = val.wilaya!;
+        const wilayaId = wilayaStr.split(' - ')[0];
+        const wilayaName = wilayaStr.split(' - ')[1];
+
         const orderId = this.dataService.placeOrder({
           name: val.name!,
           phone: val.phone!,
-          wilaya: val.wilaya!,
+          wilayaId: wilayaId,
+          wilayaName: wilayaName,
           address: val.address!
         });
         
