@@ -10,6 +10,16 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   selector: 'app-product-detail',
   standalone: true,
   imports: [NgOptimizedImage, FormsModule, RouterLink],
+  styles: [`
+    @keyframes radiating {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .btn-radiate {
+      animation: radiating 2s infinite;
+    }
+  `],
   template: `
     @if (product(); as p) {
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto mt-6">
@@ -75,23 +85,24 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
             <!-- Actions -->
             <div class="mt-auto">
-              <div class="flex flex-col gap-3 mb-4">
+              <div class="flex flex-col md:flex-row gap-3 mb-4">
+                
                 <!-- Buy Now Button (Glowing & Eye Catching) -->
                 <button 
                   (click)="buyNow(p)" 
-                  class="w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold text-xl shadow-[0_0_20px_rgba(16,185,129,0.6)] hover:shadow-[0_0_30px_rgba(16,185,129,0.8)] hover:scale-[1.02] transition-all transform flex items-center justify-center gap-2 group animate-pulse"
+                  class="flex-1 btn-radiate relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:scale-[1.02] transition-all transform flex items-center justify-center gap-2 group z-10"
                 >
                    <span class="absolute inset-0 bg-white/20 group-hover:bg-white/10 transition-colors"></span>
                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                    </svg>
-                   <span class="relative">اطلب الآن فوراً</span>
+                   <span class="relative">اطلب الآن</span>
                 </button>
 
                 <!-- Add to Cart (Secondary) -->
                 <button 
                   (click)="addToCart(p)" 
-                  class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold text-lg shadow transition flex items-center justify-center gap-2 opacity-90 hover:opacity-100"
+                  class="flex-1 bg-gray-800 hover:bg-gray-900 text-white py-4 rounded-xl font-bold text-lg shadow transition flex items-center justify-center gap-2 opacity-90 hover:opacity-100"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -218,7 +229,12 @@ export class ProductDetailComponent {
   }
 
   buyNow(p: Product) {
-    this.dataService.addToCart(p, this.quantity(), this.selectedColor());
+    // Direct Buy: Does not add to cart, just sets a temp item for checkout
+    this.dataService.setDirectBuyItem({ 
+        product: p, 
+        quantity: this.quantity(), 
+        selectedColor: this.selectedColor() 
+    });
     this.router.navigate(['/checkout']);
   }
 

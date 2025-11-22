@@ -195,6 +195,8 @@ export class DataService {
   readonly products = signal<Product[]>(this.initialProducts);
   readonly carriers = signal<Carrier[]>(this.initialCarriers);
   readonly cart = signal<CartItem[]>([]);
+  readonly directBuyItem = signal<CartItem | null>(null); // For direct checkout
+  
   readonly orders = signal<Order[]>([]);
   readonly landingPages = signal<LandingPage[]>([]);
   readonly deliverySettings = signal<DeliverySettings>({
@@ -333,6 +335,15 @@ export class DataService {
     this.cart.set([]);
   }
 
+  // Direct Buy Actions
+  setDirectBuyItem(item: CartItem) {
+    this.directBuyItem.set(item);
+  }
+
+  clearDirectBuyItem() {
+    this.directBuyItem.set(null);
+  }
+
   cartTotal = computed(() => {
     return this.cartSubtotal(); // Without shipping
   });
@@ -346,9 +357,17 @@ export class DataService {
     return s.globalPrice;
   }
 
-  placeOrder(details: { name: string, phone: string, wilayaId: string, wilayaName: string, address: string }) {
+  placeOrder(details: { name: string, phone: string, wilayaId: string, wilayaName: string, address: string }, isDirectBuy: boolean = false) {
     const shippingCost = this.getShippingPrice(details.wilayaId);
-    const subtotal = this.cartSubtotal();
+    
+    const orderItems = isDirectBuy && this.directBuyItem() 
+      ? [this.directBuyItem()!] 
+      : this.cart();
+    
+    const subtotal = orderItems.reduce((acc, item) => {
+      const price = item.product.discountPrice || item.product.price;
+      return acc + (price * item.quantity);
+    }, 0);
 
     const newOrder: Order = {
       id: 'ORD-' + Math.floor(Math.random() * 1000000),
@@ -356,7 +375,7 @@ export class DataService {
       phone: details.phone,
       wilaya: `${details.wilayaId} - ${details.wilayaName}`,
       address: details.address,
-      items: [...this.cart()],
+      items: [...orderItems],
       subtotal: subtotal,
       shippingCost: shippingCost,
       total: subtotal + shippingCost,
@@ -373,7 +392,13 @@ export class DataService {
     };
 
     this.orders.update(o => [newOrder, ...o]);
-    this.clearCart();
+    
+    if (isDirectBuy) {
+      this.clearDirectBuyItem();
+    } else {
+      this.clearCart();
+    }
+    
     return newOrder.id;
   }
 

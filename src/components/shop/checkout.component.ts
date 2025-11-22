@@ -13,11 +13,17 @@ import { NgClass } from '@angular/common';
     <div class="max-w-3xl mx-auto">
       <h1 class="text-2xl font-bold mb-6">إتمام الطلب</h1>
 
-      @if (dataService.cart().length === 0) {
+      @if (displayItems().length === 0) {
         <div class="bg-yellow-50 text-yellow-800 p-4 rounded-lg mb-4 border border-yellow-200">
           السلة فارغة. <a routerLink="/" class="underline font-bold">تسوق الآن</a>
         </div>
       } @else {
+        @if (isDirectBuy()) {
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg mb-4 text-sm">
+               🚀 <strong>شراء سريع:</strong> أنت تقوم بشراء هذا المنتج مباشرة دون إضافته للسلة.
+            </div>
+        }
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
           <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
             
@@ -65,16 +71,16 @@ import { NgClass } from '@angular/common';
             <!-- Order Summary Mini -->
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
               <h3 class="font-bold text-gray-700 mb-3">ملخص الطلب</h3>
-              @for (item of dataService.cart(); track $index) {
+              @for (item of displayItems(); track $index) {
                 <div class="flex justify-between text-sm mb-1">
-                   <span>{{item.quantity}} x {{item.product.name}}</span>
+                   <span>{{item.quantity}} x {{item.product.name}} <span class="text-xs text-gray-500">{{item.selectedColor ? '(' + item.selectedColor + ')' : ''}}</span></span>
                    <span>{{ (item.product.discountPrice || item.product.price) * item.quantity }} د.ج</span>
                 </div>
               }
               
               <div class="border-t border-gray-200 mt-3 pt-2 text-sm flex justify-between">
                  <span>المجموع الفرعي</span>
-                 <span class="font-medium">{{ dataService.cartSubtotal() }} د.ج</span>
+                 <span class="font-medium">{{ orderSubtotal() }} د.ج</span>
               </div>
               <div class="flex justify-between text-sm mt-1">
                  <span>تكلفة التوصيل</span>
@@ -83,7 +89,7 @@ import { NgClass } from '@angular/common';
               
               <div class="border-t border-gray-300 mt-2 pt-2 flex justify-between font-bold text-lg">
                 <span>الإجمالي</span>
-                <span class="text-emerald-600">{{ dataService.cartSubtotal() + shippingCost() }} د.ج</span>
+                <span class="text-emerald-600">{{ orderSubtotal() + shippingCost() }} د.ج</span>
               </div>
               <p class="text-xs text-gray-500 mt-1">* الدفع نقداً عند الاستلام فقط</p>
             </div>
@@ -98,7 +104,7 @@ import { NgClass } from '@angular/common';
                 <svg class="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 جارٍ المعالجة...
               } @else {
-                تأكيد الطلب ({{ dataService.cartSubtotal() + shippingCost() }} د.ج)
+                تأكيد الطلب ({{ orderSubtotal() + shippingCost() }} د.ج)
               }
             </button>
           </form>
@@ -141,6 +147,21 @@ export class CheckoutComponent {
     address: ['', Validators.required]
   });
 
+  // Determine if we are in Direct Buy mode or Cart mode
+  displayItems = computed(() => {
+    const direct = this.dataService.directBuyItem();
+    return direct ? [direct] : this.dataService.cart();
+  });
+
+  isDirectBuy = computed(() => !!this.dataService.directBuyItem());
+
+  orderSubtotal = computed(() => {
+     return this.displayItems().reduce((acc, item) => {
+        const price = item.product.discountPrice || item.product.price;
+        return acc + (price * item.quantity);
+     }, 0);
+  });
+
   // Computed shipping cost based on selected Wilaya
   shippingCost = computed(() => {
     const wilayaValue = this.checkoutForm.controls['wilaya'].value;
@@ -175,7 +196,7 @@ export class CheckoutComponent {
           wilayaId: wilayaId,
           wilayaName: wilayaName,
           address: val.address!
-        });
+        }, this.isDirectBuy());
         
         this.lastOrderId.set(orderId);
         this.isSubmitting.set(false);
