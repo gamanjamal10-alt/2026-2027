@@ -1,14 +1,15 @@
 
 import { Component, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DataService, Product } from '../../services/data.service';
-import { NgOptimizedImage } from '@angular/common';
+import { DataService, Product, ProductVideo } from '../../services/data.service';
+import { NgOptimizedImage, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [NgOptimizedImage, FormsModule, RouterLink],
+  imports: [NgOptimizedImage, FormsModule, RouterLink, NgClass],
   template: `
     @if (product(); as p) {
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto mt-6">
@@ -93,6 +94,65 @@ import { FormsModule } from '@angular/forms';
             </div>
           </div>
         </div>
+
+        <!-- Video Section -->
+        @if (p.videos && p.videos.length > 0) {
+          <div class="border-t border-gray-100 p-6 md:p-10 bg-gray-50">
+             <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+               <svg class="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+               فيديو المنتج
+             </h2>
+             
+             <!-- Player Container -->
+             <div class="max-w-3xl mx-auto">
+                <div class="relative bg-black rounded-xl overflow-hidden shadow-lg aspect-video mb-4">
+                  @if (activeVideo(); as video) {
+                     @if (video.type === 'link' && getSafeUrl(video.url)) {
+                        <iframe 
+                          [src]="getSafeUrl(video.url)" 
+                          class="w-full h-full" 
+                          frameborder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                          allowfullscreen
+                        ></iframe>
+                     } @else {
+                        <video 
+                          [src]="video.url" 
+                          class="w-full h-full object-contain" 
+                          controls 
+                          [autoplay]="dataService.videoSettings().autoplay"
+                          [muted]="dataService.videoSettings().muted"
+                          [controlsList]="dataService.videoSettings().allowDownload ? '' : 'nodownload'"
+                        >
+                          متصفحك لا يدعم الفيديو.
+                        </video>
+                     }
+                  }
+                </div>
+
+                <!-- Thumbnails / Slider if multiple -->
+                @if (p.videos.length > 1) {
+                  <div class="flex gap-4 overflow-x-auto pb-2">
+                     @for (video of p.videos; track video.id) {
+                       <button 
+                         (click)="activeVideo.set(video)"
+                         [class.ring-2]="activeVideo()?.id === video.id"
+                         class="flex-shrink-0 w-24 h-16 bg-gray-200 rounded-lg overflow-hidden relative border-2 border-transparent ring-purple-500 hover:opacity-80 transition"
+                       >
+                         <!-- Fake thumbnail logic based on type -->
+                         <div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-xs">
+                            {{ video.type === 'file' ? 'MP4' : 'Link' }}
+                         </div>
+                         <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-[10px] truncate px-1">
+                           {{ video.name }}
+                         </div>
+                       </button>
+                     }
+                  </div>
+                }
+             </div>
+          </div>
+        }
       </div>
     } @else {
        <div class="text-center py-20">
@@ -104,11 +164,13 @@ import { FormsModule } from '@angular/forms';
 })
 export class ProductDetailComponent {
   private route: ActivatedRoute = inject(ActivatedRoute);
-  private dataService = inject(DataService);
+  dataService = inject(DataService);
+  sanitizer = inject(DomSanitizer);
 
   product = signal<Product | undefined>(undefined);
   quantity = signal(1);
   selectedColor = signal<string | undefined>(undefined);
+  activeVideo = signal<ProductVideo | null>(null);
 
   constructor() {
     this.route.paramMap.subscribe(params => {
@@ -118,6 +180,9 @@ export class ProductDetailComponent {
         this.product.set(found);
         if (found?.colors?.length) {
           this.selectedColor.set(found.colors[0]);
+        }
+        if (found?.videos?.length) {
+          this.activeVideo.set(found.videos[0]);
         }
       }
     });
@@ -130,7 +195,22 @@ export class ProductDetailComponent {
 
   addToCart(p: Product) {
     this.dataService.addToCart(p, this.quantity(), this.selectedColor());
-    // Simple visual feedback could be added here
     alert('تمت الإضافة للسلة بنجاح!');
+  }
+
+  getSafeUrl(url: string): SafeResourceUrl | null {
+    // Simple check for YouTube to embed correctly
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+       let videoId = '';
+       if (url.includes('v=')) videoId = url.split('v=')[1]?.split('&')[0];
+       else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1];
+       
+       if (videoId) {
+          const params = this.dataService.videoSettings().autoplay ? '?autoplay=1&mute=1' : '';
+          return this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube.com/embed/${videoId}${params}`);
+       }
+    }
+    // Fallback for other iframes or direct links might need more complex logic
+    return null;
   }
 }

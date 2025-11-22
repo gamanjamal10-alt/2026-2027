@@ -21,7 +21,8 @@ import { FormsModule } from '@angular/forms';
               <th class="p-4">الولاية</th>
               <th class="p-4">الهاتف</th>
               <th class="p-4">المبلغ</th>
-              <th class="p-4">الحالة</th>
+              <th class="p-4">حالة الطلب</th>
+              <th class="p-4">حالة الشحن</th>
               <th class="p-4">إجراءات</th>
             </tr>
           </thead>
@@ -52,14 +53,32 @@ import { FormsModule } from '@angular/forms';
                    </select>
                 </td>
                 <td class="p-4">
+                  @if (order.status === 'shipped') {
+                    <select 
+                      [ngModel]="order.carrierStatus" 
+                      (ngModelChange)="updateCarrierStatus(order.id, $event)"
+                      class="bg-blue-50 border-blue-200 text-blue-800 rounded text-xs p-1 font-bold cursor-pointer focus:ring-0 w-28"
+                    >
+                      <option [ngValue]="undefined">اختر حالة</option>
+                      <option value="sent">تم الإرسال</option>
+                      <option value="transit">في الطريق</option>
+                      <option value="delivered">تم التسليم</option>
+                      <option value="returned">تم الإرجاع</option>
+                    </select>
+                  } @else {
+                    <span class="text-gray-300">-</span>
+                  }
+                </td>
+                <td class="p-4">
                   @if (order.status !== 'shipped' && order.status !== 'cancelled') {
                     <button (click)="openShippingModal(order)" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
                       إرسال للشحن
                     </button>
                   } @else if (order.status === 'shipped') {
-                     <span class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
-                       {{ order.shippingProvider }} ({{ order.trackingCode }})
-                     </span>
+                     <div class="text-xs text-gray-500 flex flex-col">
+                       <span class="font-bold">{{ order.shippingProvider }}</span>
+                       <span class="font-mono text-[10px]">{{ order.trackingCode }}</span>
+                     </div>
                   }
                 </td>
               </tr>
@@ -120,6 +139,13 @@ export class OrdersManagerComponent {
   updateStatus(id: string, status: any) {
     this.dataService.updateOrderStatus(id, status);
   }
+  
+  updateCarrierStatus(id: string, status: any) {
+    this.dataService.updateOrderStatus(id, 'shipped', undefined, undefined, status);
+    if (status === 'delivered') {
+       this.dataService.updateOrderStatus(id, 'completed', undefined, undefined, status);
+    }
+  }
 
   openShippingModal(order: Order) {
     this.selectedOrder = order;
@@ -131,22 +157,12 @@ export class OrdersManagerComponent {
       // Simulation of API Call
       const mockTrackingCode = 'TRK-' + Math.floor(Math.random() * 999999);
       
-      console.log('Sending to API:', {
-        provider: this.selectedProvider,
-        payload: {
-          name: this.selectedOrder.customerName,
-          phone: this.selectedOrder.phone,
-          wilaya: this.selectedOrder.wilaya,
-          products: this.selectedOrder.items,
-          total: this.selectedOrder.total
-        }
-      });
-
       this.dataService.updateOrderStatus(
         this.selectedOrder.id, 
         'shipped', 
         mockTrackingCode, 
-        this.selectedProvider
+        this.selectedProvider,
+        'sent'
       );
 
       alert(`تم إرسال الطلب بنجاح إلى ${this.selectedProvider}.\nرقم التتبع: ${mockTrackingCode}`);

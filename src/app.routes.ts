@@ -11,6 +11,8 @@ import { DashboardComponent } from './components/admin/dashboard.component';
 import { ProductsManagerComponent } from './components/admin/products-manager.component';
 import { OrdersManagerComponent } from './components/admin/orders-manager.component';
 import { AdminLoginComponent } from './components/admin/login.component';
+import { VideoManagerComponent } from './components/admin/video-manager.component';
+import { VideoSettingsComponent } from './components/admin/video-settings.component';
 
 export const routes: Routes = [
   {
@@ -32,6 +34,8 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'products', component: ProductsManagerComponent },
       { path: 'orders', component: OrdersManagerComponent },
+      { path: 'videos', component: VideoManagerComponent },
+      { path: 'video-settings', component: VideoSettingsComponent },
     ]
   },
   { path: 'login', component: AdminLoginComponent },

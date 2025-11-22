@@ -1,16 +1,34 @@
 
 import { Injectable, signal, computed, effect } from '@angular/core';
 
+export interface ProductVideo {
+  id: string;
+  type: 'file' | 'link';
+  url: string; // Blob URL for uploads in this demo, or Embed URL
+  name: string;
+  size?: string;
+  platform?: 'youtube' | 'tiktok' | 'vimeo' | 'other';
+}
+
+export interface VideoSettings {
+  autoplay: boolean;
+  muted: boolean;
+  allowDownload: boolean;
+  defaultQuality: 'auto' | 'hd' | 'sd';
+  playerSize: 'normal' | 'large' | 'full';
+}
+
 export interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  discountPrice?: number; // Optional discount
+  discountPrice?: number;
   category: string;
   image: string;
   stock: number;
   colors?: string[];
+  videos?: ProductVideo[];
 }
 
 export interface CartItem {
@@ -28,6 +46,7 @@ export interface Order {
   items: CartItem[];
   total: number;
   status: 'new' | 'processing' | 'shipped' | 'completed' | 'cancelled';
+  carrierStatus?: 'sent' | 'transit' | 'delivered' | 'returned';
   date: string;
   trackingCode?: string;
   shippingProvider?: string;
@@ -46,7 +65,8 @@ export class DataService {
       category: 'إلكترونيات',
       image: 'https://picsum.photos/300/300?random=1',
       stock: 50,
-      colors: ['أسود', 'فضي', 'برتقالي']
+      colors: ['أسود', 'فضي', 'برتقالي'],
+      videos: []
     },
     {
       id: '2',
@@ -84,6 +104,14 @@ export class DataService {
   readonly cart = signal<CartItem[]>([]);
   readonly orders = signal<Order[]>([]);
   readonly isAdmin = signal<boolean>(false);
+  
+  readonly videoSettings = signal<VideoSettings>({
+    autoplay: false,
+    muted: true,
+    allowDownload: false,
+    defaultQuality: 'auto',
+    playerSize: 'normal'
+  });
 
   readonly cartTotal = computed(() => {
     return this.cart().reduce((acc, item) => {
@@ -108,6 +136,11 @@ export class DataService {
       if (storedProducts) {
           this.products.set(JSON.parse(storedProducts));
       }
+
+      const storedSettings = localStorage.getItem('dz_video_settings');
+      if (storedSettings) {
+        this.videoSettings.set(JSON.parse(storedSettings));
+      }
     }
 
     // Persist changes
@@ -119,6 +152,11 @@ export class DataService {
      effect(() => {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('dz_products', JSON.stringify(this.products()));
+      }
+    });
+    effect(() => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('dz_video_settings', JSON.stringify(this.videoSettings()));
       }
     });
   }
@@ -174,18 +212,24 @@ export class DataService {
     return newOrder.id;
   }
 
-  updateOrderStatus(id: string, status: Order['status'], trackingCode?: string, provider?: string) {
+  updateOrderStatus(id: string, status: Order['status'], trackingCode?: string, provider?: string, carrierStatus?: Order['carrierStatus']) {
     this.orders.update(orders => orders.map(o => {
       if (o.id === id) {
         return { 
           ...o, 
           status, 
           trackingCode: trackingCode || o.trackingCode,
-          shippingProvider: provider || o.shippingProvider 
+          shippingProvider: provider || o.shippingProvider,
+          carrierStatus: carrierStatus || o.carrierStatus
         };
       }
       return o;
     }));
+  }
+
+  // Video Settings
+  updateVideoSettings(settings: VideoSettings) {
+    this.videoSettings.set(settings);
   }
 
   // Auth

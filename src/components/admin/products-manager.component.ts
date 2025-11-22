@@ -1,6 +1,6 @@
 
 import { Component, inject, signal } from '@angular/core';
-import { DataService, Product } from '../../services/data.service';
+import { DataService, Product, ProductVideo } from '../../services/data.service';
 import { GeminiService } from '../../services/gemini.service';
 import { FormsModule } from '@angular/forms';
 import { NgOptimizedImage } from '@angular/common';
@@ -27,6 +27,11 @@ import { NgOptimizedImage } from '@angular/common';
           <div class="flex-grow">
              <h3 class="font-bold text-gray-800 mb-1">{{ product.name }}</h3>
              <div class="text-sm text-emerald-600 font-bold mb-2">{{ product.price }} د.ج</div>
+             @if (product.videos?.length) {
+                <div class="text-xs text-purple-600 bg-purple-50 inline-block px-2 py-1 rounded mb-2">
+                  🎥 {{product.videos?.length}} فيديو
+                </div>
+             }
              <div class="flex gap-2 mt-auto">
                <button (click)="editProduct(product)" class="text-blue-600 text-sm bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">تعديل</button>
                <button (click)="deleteProduct(product.id)" class="text-red-600 text-sm bg-red-50 px-3 py-1 rounded hover:bg-red-100">حذف</button>
@@ -43,6 +48,7 @@ import { NgOptimizedImage } from '@angular/common';
           <h2 class="text-xl font-bold mb-4">{{ isEditing() ? 'تعديل منتج' : 'إضافة منتج جديد' }}</h2>
           
           <form (ngSubmit)="saveProduct()">
+             <!-- Basic Info -->
              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                <div>
                  <label class="block text-sm font-medium mb-1">اسم المنتج</label>
@@ -82,10 +88,64 @@ import { NgOptimizedImage } from '@angular/common';
                      }
                    </button>
                 </div>
-                <textarea [(ngModel)]="currentProduct.description" name="description" rows="4" class="w-full p-2 border rounded"></textarea>
+                <textarea [(ngModel)]="currentProduct.description" name="description" rows="3" class="w-full p-2 border rounded"></textarea>
              </div>
 
-             <div class="flex justify-end gap-2">
+             <!-- Video Section -->
+             <div class="mb-6 border-t pt-4">
+               <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                 <svg class="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                 قسم الفيديوهات
+               </h3>
+               
+               <!-- Add Video Form -->
+               <div class="bg-gray-50 p-3 rounded border mb-3">
+                  <div class="flex gap-2 mb-2 text-sm">
+                    <button type="button" (click)="videoInputType='link'" [class]="videoInputType==='link' ? 'bg-white shadow text-purple-700' : 'text-gray-500'" class="flex-1 py-1 rounded transition">رابط (YouTube/TikTok)</button>
+                    <button type="button" (click)="videoInputType='file'" [class]="videoInputType==='file' ? 'bg-white shadow text-purple-700' : 'text-gray-500'" class="flex-1 py-1 rounded transition">رفع ملف (MP4)</button>
+                  </div>
+
+                  @if (videoInputType === 'link') {
+                    <div class="flex gap-2">
+                      <input type="text" [(ngModel)]="newVideoUrl" name="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="flex-grow p-2 border rounded text-sm">
+                      <button type="button" (click)="addVideoLink()" class="bg-purple-600 text-white px-3 rounded text-sm">إضافة</button>
+                    </div>
+                  } @else {
+                    <div class="flex gap-2 items-center">
+                      <input type="file" (change)="onFileSelected($event)" accept="video/*" class="flex-grow text-sm">
+                    </div>
+                    @if (uploadProgress > 0) {
+                      <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                        <div class="bg-purple-600 h-1.5 rounded-full" [style.width.%]="uploadProgress"></div>
+                      </div>
+                    }
+                  }
+               </div>
+
+               <!-- Video List -->
+               @if (currentProduct.videos && currentProduct.videos.length > 0) {
+                 <div class="space-y-2">
+                   @for (video of currentProduct.videos; track video.id) {
+                     <div class="flex items-center justify-between bg-white border p-2 rounded shadow-sm">
+                       <div class="flex items-center gap-2 overflow-hidden">
+                         <span class="bg-gray-100 p-1 rounded">
+                           <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         </span>
+                         <span class="text-sm truncate max-w-[200px]">{{ video.name }}</span>
+                         <span class="text-xs text-gray-400 border border-gray-200 px-1 rounded">{{ video.type === 'file' ? 'ملف' : 'رابط' }}</span>
+                       </div>
+                       <button type="button" (click)="removeVideo(video.id)" class="text-red-500 hover:bg-red-50 p-1 rounded">
+                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                       </button>
+                     </div>
+                   }
+                 </div>
+               } @else {
+                 <p class="text-gray-400 text-xs text-center py-2">لا توجد فيديوهات مضافة</p>
+               }
+             </div>
+
+             <div class="flex justify-end gap-2 mt-4">
                <button type="button" (click)="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">إلغاء</button>
                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700">حفظ</button>
              </div>
@@ -103,6 +163,11 @@ export class ProductsManagerComponent {
   isEditing = signal(false);
   isGenerating = signal(false);
 
+  // Video UI State
+  videoInputType: 'link' | 'file' = 'link';
+  newVideoUrl = '';
+  uploadProgress = 0;
+
   defaultProduct: Product = {
     id: '',
     name: '',
@@ -110,21 +175,24 @@ export class ProductsManagerComponent {
     price: 0,
     description: '',
     image: 'https://picsum.photos/300/300',
-    stock: 10
+    stock: 10,
+    videos: []
   };
 
   currentProduct: Product = { ...this.defaultProduct };
 
   openModal() {
     this.isEditing.set(false);
-    this.currentProduct = { ...this.defaultProduct, id: Date.now().toString() };
+    this.currentProduct = { ...this.defaultProduct, id: Date.now().toString(), videos: [] };
     this.isModalOpen.set(true);
+    this.resetVideoForm();
   }
 
   editProduct(p: Product) {
     this.isEditing.set(true);
-    this.currentProduct = { ...p };
+    this.currentProduct = { ...p, videos: p.videos ? [...p.videos] : [] };
     this.isModalOpen.set(true);
+    this.resetVideoForm();
   }
 
   closeModal() {
@@ -152,5 +220,57 @@ export class ProductsManagerComponent {
     const desc = await this.geminiService.generateProductDescription(this.currentProduct.name, this.currentProduct.category);
     this.currentProduct.description = desc;
     this.isGenerating.set(false);
+  }
+
+  // Video Logic
+  resetVideoForm() {
+    this.newVideoUrl = '';
+    this.videoInputType = 'link';
+    this.uploadProgress = 0;
+  }
+
+  addVideoLink() {
+    if (!this.newVideoUrl) return;
+    
+    const newVideo: ProductVideo = {
+      id: 'VID-' + Date.now(),
+      type: 'link',
+      url: this.newVideoUrl,
+      name: 'فيديو خارجي ' + (this.currentProduct.videos?.length || 0 + 1),
+      platform: 'youtube' // simplified detection
+    };
+
+    this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
+    this.newVideoUrl = '';
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      // Simulate upload
+      this.uploadProgress = 10;
+      const interval = setInterval(() => {
+        this.uploadProgress += 20;
+        if (this.uploadProgress >= 100) {
+          clearInterval(interval);
+          
+          const newVideo: ProductVideo = {
+            id: 'VID-' + Date.now(),
+            type: 'file',
+            url: URL.createObjectURL(file), // Temporary blob URL for demo session
+            name: file.name,
+            size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
+          };
+          
+          this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
+          this.uploadProgress = 0;
+          event.target.value = ''; // reset input
+        }
+      }, 300);
+    }
+  }
+
+  removeVideo(id: string) {
+    this.currentProduct.videos = this.currentProduct.videos?.filter(v => v.id !== id);
   }
 }

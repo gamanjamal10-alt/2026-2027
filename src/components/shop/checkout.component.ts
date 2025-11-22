@@ -42,7 +42,7 @@ import { NgClass } from '@angular/common';
             <!-- Location -->
             <div class="grid md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">الولاية (التقسيم الإداري الجديد)</label>
                 <select formControlName="wilaya" class="w-full p-3 border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
                   <option value="" disabled>اختر الولاية</option>
                   @for (w of wilayas; track w.id) {
@@ -95,7 +95,7 @@ import { NgClass } from '@angular/common';
         </div>
       }
 
-      <!-- Success Modal Overlay (Simple implementation) -->
+      <!-- Success Modal Overlay -->
       @if (showSuccess()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center">
@@ -126,12 +126,11 @@ export class CheckoutComponent {
 
   checkoutForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
-    phone: ['', [Validators.required, Validators.pattern(/^0[567]\d{8}$/)]], // Basic Algerian phone regex
+    phone: ['', [Validators.required, Validators.pattern(/^0[567]\d{8}$/)]], 
     wilaya: ['', Validators.required],
     address: ['', Validators.required]
   });
 
-  // Full list of 58 wilayas + placeholders for new ones if needed
   wilayas = [
     { id: '01', name: 'أدرار' }, { id: '02', name: 'الشلف' }, { id: '03', name: 'الأغواط' }, { id: '04', name: 'أم البواقي' },
     { id: '05', name: 'باتنة' }, { id: '06', name: 'بجاية' }, { id: '07', name: 'بسكرة' }, { id: '08', name: 'بشار' },
@@ -147,7 +146,12 @@ export class CheckoutComponent {
     { id: '45', name: 'النعامة' }, { id: '46', name: 'عين تموشنت' }, { id: '47', name: 'غرداية' }, { id: '48', name: 'غليزان' },
     { id: '49', name: 'تيميمون' }, { id: '50', name: 'برج باجي مختار' }, { id: '51', name: 'أولاد جلال' }, { id: '52', name: 'بني عباس' },
     { id: '53', name: 'عين صالح' }, { id: '54', name: 'عين قزام' }, { id: '55', name: 'تقرت' }, { id: '56', name: 'جانت' },
-    { id: '57', name: 'المغير' }, { id: '58', name: 'المنيعة' }
+    { id: '57', name: 'المغير' }, { id: '58', name: 'المنيعة' },
+    // Placeholder for new divisions to reach 69
+    { id: '59', name: 'بوسعادة (مقترح)' }, { id: '60', name: 'بريكة (مقترح)' }, { id: '61', name: 'الشريعة (مقترح)' }, 
+    { id: '62', name: 'مسعد (مقترح)' }, { id: '63', name: 'العلمة (مقترح)' }, { id: '64', name: 'عين وسارة (مقترح)' },
+    { id: '65', name: 'أفلو (مقترح)' }, { id: '66', name: 'عين البيضاء (مقترح)' }, { id: '67', name: 'تنس (مقترح)' },
+    { id: '68', name: 'الأبيض سيدي الشيخ (مقترح)' }, { id: '69', name: 'القرارة (مقترح)' }
   ];
 
   onSubmit() {
