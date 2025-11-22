@@ -103,7 +103,7 @@ import { FormsModule } from '@angular/forms';
   `
 })
 export class ProductDetailComponent {
-  private route = inject(ActivatedRoute);
+  private route: ActivatedRoute = inject(ActivatedRoute);
   private dataService = inject(DataService);
 
   product = signal<Product | undefined>(undefined);

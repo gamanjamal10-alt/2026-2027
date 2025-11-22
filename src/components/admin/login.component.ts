@@ -39,7 +39,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class AdminLoginComponent {
   dataService = inject(DataService);
-  router = inject(Router);
+  router: Router = inject(Router);
   password = signal('');
   error = signal(false);
 

@@ -98,22 +98,28 @@ export class DataService {
 
   constructor() {
     // Load from local storage if available
-    const storedOrders = localStorage.getItem('dz_orders');
-    if (storedOrders) {
-      this.orders.set(JSON.parse(storedOrders));
-    }
-    
-    const storedProducts = localStorage.getItem('dz_products');
-    if (storedProducts) {
-        this.products.set(JSON.parse(storedProducts));
+    if (typeof localStorage !== 'undefined') {
+      const storedOrders = localStorage.getItem('dz_orders');
+      if (storedOrders) {
+        this.orders.set(JSON.parse(storedOrders));
+      }
+      
+      const storedProducts = localStorage.getItem('dz_products');
+      if (storedProducts) {
+          this.products.set(JSON.parse(storedProducts));
+      }
     }
 
     // Persist changes
     effect(() => {
-      localStorage.setItem('dz_orders', JSON.stringify(this.orders()));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('dz_orders', JSON.stringify(this.orders()));
+      }
     });
      effect(() => {
-      localStorage.setItem('dz_products', JSON.stringify(this.products()));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('dz_products', JSON.stringify(this.products()));
+      }
     });
   }
 

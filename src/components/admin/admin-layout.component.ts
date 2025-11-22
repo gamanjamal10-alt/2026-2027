@@ -70,7 +70,7 @@ import { DataService } from '../../services/data.service';
 })
 export class AdminLayoutComponent {
   dataService = inject(DataService);
-  router = inject(Router);
+  router: Router = inject(Router);
 
   constructor() {
     if (!this.dataService.isAdmin()) {

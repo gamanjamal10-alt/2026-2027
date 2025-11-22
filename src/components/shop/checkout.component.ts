@@ -117,8 +117,8 @@ import { NgClass } from '@angular/common';
 })
 export class CheckoutComponent {
   dataService = inject(DataService);
-  fb = inject(FormBuilder);
-  router = inject(Router);
+  fb: FormBuilder = inject(FormBuilder);
+  router: Router = inject(Router);
 
   isSubmitting = signal(false);
   showSuccess = signal(false);
