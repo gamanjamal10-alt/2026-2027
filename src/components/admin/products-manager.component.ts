@@ -20,12 +20,15 @@ import { NgOptimizedImage } from '@angular/common';
     <!-- Product Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (product of dataService.products(); track product.id) {
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4" [class.opacity-60]="!product.isVisible">
           <div class="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative">
              @if (product.image.startsWith('data:')) {
                 <img [src]="product.image" class="w-full h-full object-cover" alt="Product">
              } @else {
                 <img [ngSrc]="product.image" width="96" height="96" class="w-full h-full object-cover" alt="Product">
+             }
+             @if (!product.isVisible) {
+               <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xs font-bold">مخفي</div>
              }
           </div>
           <div class="flex-grow">
@@ -52,6 +55,15 @@ import { NgOptimizedImage } from '@angular/common';
           <h2 class="text-xl font-bold mb-4">{{ isEditing() ? 'تعديل منتج' : 'إضافة منتج جديد' }}</h2>
           
           <form (ngSubmit)="saveProduct()">
+             <!-- Visibility Toggle -->
+             <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded border">
+                <span class="font-bold text-gray-700">حالة المنتج</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                   <input type="checkbox" [(ngModel)]="currentProduct.isVisible" name="isVisible" class="w-5 h-5 text-emerald-600 rounded">
+                   <span class="text-sm">{{ currentProduct.isVisible ? 'مرئي للزبائن' : 'مخفي' }}</span>
+                </label>
+             </div>
+
              <!-- Basic Info -->
              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                <div>
@@ -85,7 +97,6 @@ import { NgOptimizedImage } from '@angular/common';
                   <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
                     <input type="file" (change)="onImageFileSelected($event)" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                     <div class="flex flex-col items-center gap-2 text-gray-500">
-                       <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                        @if (imageUploadProgress > 0 && imageUploadProgress < 100) {
                          <span class="text-emerald-600 font-bold">جارٍ الرفع... {{imageUploadProgress}}%</span>
                        } @else {
@@ -113,7 +124,6 @@ import { NgOptimizedImage } from '@angular/common';
                      class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded flex items-center gap-1 hover:bg-purple-200"
                    >
                      @if (isGenerating()) { <span>...</span> } @else { 
-                       <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                        توليد بالذكاء الاصطناعي 
                      }
                    </button>
@@ -124,7 +134,6 @@ import { NgOptimizedImage } from '@angular/common';
              <!-- Video Section -->
              <div class="mb-6 border-t pt-4">
                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                 <svg class="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                  قسم الفيديوهات
                </h3>
                
@@ -158,20 +167,15 @@ import { NgOptimizedImage } from '@angular/common';
                    @for (video of currentProduct.videos; track video.id) {
                      <div class="flex items-center justify-between bg-white border p-2 rounded shadow-sm">
                        <div class="flex items-center gap-2 overflow-hidden">
-                         <span class="bg-gray-100 p-1 rounded">
-                           <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                         </span>
                          <span class="text-sm truncate max-w-[200px]">{{ video.name }}</span>
                          <span class="text-xs text-gray-400 border border-gray-200 px-1 rounded">{{ video.type === 'file' ? 'ملف' : 'رابط' }}</span>
                        </div>
                        <button type="button" (click)="removeVideo(video.id)" class="text-red-500 hover:bg-red-50 p-1 rounded">
-                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          حذف
                        </button>
                      </div>
                    }
                  </div>
-               } @else {
-                 <p class="text-gray-400 text-xs text-center py-2">لا توجد فيديوهات مضافة</p>
                }
              </div>
 
@@ -193,11 +197,9 @@ export class ProductsManagerComponent {
   isEditing = signal(false);
   isGenerating = signal(false);
 
-  // Image UI State
   imageInputType: 'link' | 'file' = 'link';
   imageUploadProgress = 0;
 
-  // Video UI State
   videoInputType: 'link' | 'file' = 'link';
   newVideoUrl = '';
   uploadProgress = 0;
@@ -210,7 +212,8 @@ export class ProductsManagerComponent {
     description: '',
     image: 'https://picsum.photos/300/300',
     stock: 10,
-    videos: []
+    videos: [],
+    isVisible: true
   };
 
   currentProduct: Product = { ...this.defaultProduct };
@@ -228,7 +231,6 @@ export class ProductsManagerComponent {
     this.isModalOpen.set(true);
     this.resetForm();
     
-    // Auto-detect image type
     if (p.image && p.image.startsWith('data:')) {
       this.imageInputType = 'file';
     }
@@ -262,12 +264,13 @@ export class ProductsManagerComponent {
   }
 
   resetForm() {
-    this.resetVideoForm();
+    this.newVideoUrl = '';
+    this.videoInputType = 'link';
+    this.uploadProgress = 0;
     this.imageInputType = 'link';
     this.imageUploadProgress = 0;
   }
 
-  // Image Logic
   onImageFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
@@ -275,18 +278,11 @@ export class ProductsManagerComponent {
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.imageUploadProgress = 100;
-        this.currentProduct.image = e.target.result; // Base64 string
+        this.currentProduct.image = e.target.result;
         setTimeout(() => this.imageUploadProgress = 0, 500);
       };
       reader.readAsDataURL(file);
     }
-  }
-
-  // Video Logic
-  resetVideoForm() {
-    this.newVideoUrl = '';
-    this.videoInputType = 'link';
-    this.uploadProgress = 0;
   }
 
   addVideoLink() {
@@ -316,7 +312,7 @@ export class ProductsManagerComponent {
           const newVideo: ProductVideo = {
             id: 'VID-' + Date.now(),
             type: 'file',
-            url: URL.createObjectURL(file), // Temporary blob URL for demo
+            url: URL.createObjectURL(file),
             name: file.name,
             size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
           };

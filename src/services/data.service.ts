@@ -29,12 +29,20 @@ export interface Product {
   stock: number;
   colors?: string[];
   videos?: ProductVideo[];
+  isVisible: boolean; // New: Visibility toggle
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
   selectedColor?: string;
+}
+
+export interface OrderLog {
+  date: string;
+  action: string;
+  status: 'success' | 'error' | 'info' | 'warning';
+  details: string;
 }
 
 export interface Order {
@@ -52,6 +60,18 @@ export interface Order {
   date: string;
   trackingCode?: string;
   shippingProvider?: string;
+  carrierId?: string;
+  logs: OrderLog[]; // New: Audit trail
+}
+
+export interface Carrier {
+  id: string;
+  name: string;
+  wilayas: string[]; // List of Wilaya IDs covered
+  contactMethod: 'api' | 'email' | 'webhook' | 'sms';
+  phone?: string;
+  email?: string;
+  notes?: string;
 }
 
 export interface LandingPage {
@@ -62,9 +82,9 @@ export interface LandingPage {
   heroTitle: string;
   heroText: string;
   videoUrl?: string;
-  features: string[]; // Simple list of features
+  features: string[];
   ctaText: string;
-  ctaLink: string; // usually /product/:id
+  ctaLink: string;
   isActive: boolean;
   views: number;
   template: 'modern' | 'classic';
@@ -73,7 +93,7 @@ export interface LandingPage {
 export interface DeliverySettings {
   globalPrice: number;
   useCustomPerWilaya: boolean;
-  wilayaPrices: Record<string, number>; // { '01': 500, '16': 400 }
+  wilayaPrices: Record<string, number>;
 }
 
 export interface Wilaya {
@@ -117,7 +137,8 @@ export class DataService {
       image: 'https://picsum.photos/300/300?random=1',
       stock: 50,
       colors: ['أسود', 'فضي', 'برتقالي'],
-      videos: []
+      videos: [],
+      isVisible: true
     },
     {
       id: '2',
@@ -127,7 +148,8 @@ export class DataService {
       category: 'إلكترونيات',
       image: 'https://picsum.photos/300/300?random=2',
       stock: 100,
-      colors: ['أبيض']
+      colors: ['أبيض'],
+      isVisible: true
     },
     {
       id: '3',
@@ -137,7 +159,8 @@ export class DataService {
       category: 'حقائب',
       image: 'https://picsum.photos/300/300?random=3',
       stock: 20,
-      colors: ['أزرق', 'رمادي']
+      colors: ['أزرق', 'رمادي'],
+      isVisible: true
     },
      {
       id: '4',
@@ -146,12 +169,31 @@ export class DataService {
       price: 3200,
       category: 'عناية شخصية',
       image: 'https://picsum.photos/300/300?random=4',
-      stock: 35
+      stock: 35,
+      isVisible: true
+    }
+  ];
+
+  private initialCarriers: Carrier[] = [
+    { 
+      id: 'yalidine', 
+      name: 'Yalidine Express', 
+      wilayas: this.wilayas.map(w => w.id), // Covers all by default
+      contactMethod: 'api',
+      notes: 'التوصيل للمنزل والمكتب'
+    },
+    { 
+      id: 'zrexpress', 
+      name: 'ZR Express', 
+      wilayas: ['16', '09', '31', '25', '15'], // Major cities only
+      contactMethod: 'api',
+      notes: 'توصيل سريع للمدن الكبرى'
     }
   ];
 
   // Signals
   readonly products = signal<Product[]>(this.initialProducts);
+  readonly carriers = signal<Carrier[]>(this.initialCarriers);
   readonly cart = signal<CartItem[]>([]);
   readonly orders = signal<Order[]>([]);
   readonly landingPages = signal<LandingPage[]>([]);
@@ -170,7 +212,6 @@ export class DataService {
     playerSize: 'normal'
   });
 
-  // Mock Visitor Data for Analytics (Since no backend)
   readonly visitorStats = signal<{date: string, count: number}[]>([]);
 
   readonly cartSubtotal = computed(() => {
@@ -187,13 +228,29 @@ export class DataService {
   constructor() {
     this.generateMockVisitorData();
 
-    // Load from local storage if available
     if (typeof localStorage !== 'undefined') {
       const storedOrders = localStorage.getItem('dz_orders');
-      if (storedOrders) this.orders.set(JSON.parse(storedOrders));
+      if (storedOrders) {
+        // Migrate old orders to have logs
+        const parsedOrders = JSON.parse(storedOrders);
+        this.orders.set(parsedOrders.map((o: any) => ({
+          ...o,
+          logs: o.logs || []
+        })));
+      }
       
       const storedProducts = localStorage.getItem('dz_products');
-      if (storedProducts) this.products.set(JSON.parse(storedProducts));
+      if (storedProducts) {
+        // Migrate products to have isVisible
+        const parsedProducts = JSON.parse(storedProducts);
+        this.products.set(parsedProducts.map((p: any) => ({
+           ...p,
+           isVisible: p.isVisible !== undefined ? p.isVisible : true
+        })));
+      }
+
+      const storedCarriers = localStorage.getItem('dz_carriers');
+      if (storedCarriers) this.carriers.set(JSON.parse(storedCarriers));
 
       const storedVideoSettings = localStorage.getItem('dz_video_settings');
       if (storedVideoSettings) this.videoSettings.set(JSON.parse(storedVideoSettings));
@@ -205,11 +262,11 @@ export class DataService {
       if (storedLanding) this.landingPages.set(JSON.parse(storedLanding));
     }
 
-    // Persist changes
     effect(() => {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('dz_orders', JSON.stringify(this.orders()));
         localStorage.setItem('dz_products', JSON.stringify(this.products()));
+        localStorage.setItem('dz_carriers', JSON.stringify(this.carriers()));
         localStorage.setItem('dz_video_settings', JSON.stringify(this.videoSettings()));
         localStorage.setItem('dz_delivery_settings', JSON.stringify(this.deliverySettings()));
         localStorage.setItem('dz_landing_pages', JSON.stringify(this.landingPages()));
@@ -218,7 +275,6 @@ export class DataService {
   }
 
   private generateMockVisitorData() {
-    // Generate last 30 days of mock data
     const data = [];
     const today = new Date();
     for (let i = 29; i >= 0; i--) {
@@ -226,7 +282,7 @@ export class DataService {
       d.setDate(d.getDate() - i);
       data.push({
         date: d.toISOString().split('T')[0],
-        count: Math.floor(Math.random() * 300) + 50 // Random daily visitors between 50 and 350
+        count: Math.floor(Math.random() * 300) + 50
       });
     }
     this.visitorStats.set(data);
@@ -243,6 +299,19 @@ export class DataService {
 
   deleteProduct(id: string) {
     this.products.update(p => p.filter(i => i.id !== id));
+  }
+
+  // Carrier Actions
+  addCarrier(carrier: Carrier) {
+    this.carriers.update(c => [carrier, ...c]);
+  }
+
+  updateCarrier(carrier: Carrier) {
+    this.carriers.update(c => c.map(i => i.id === carrier.id ? carrier : i));
+  }
+
+  deleteCarrier(id: string) {
+    this.carriers.update(c => c.filter(i => i.id !== id));
   }
 
   // Cart Actions
@@ -263,6 +332,10 @@ export class DataService {
   clearCart() {
     this.cart.set([]);
   }
+
+  cartTotal = computed(() => {
+    return this.cartSubtotal(); // Without shipping
+  });
 
   // Order Actions
   getShippingPrice(wilayaId: string): number {
@@ -288,7 +361,15 @@ export class DataService {
       shippingCost: shippingCost,
       total: subtotal + shippingCost,
       status: 'new',
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      logs: [
+        {
+          date: new Date().toISOString(),
+          action: 'إنشاء الطلب',
+          status: 'success',
+          details: 'تم استلام الطلب من الزبون'
+        }
+      ]
     };
 
     this.orders.update(o => [newOrder, ...o]);
@@ -299,16 +380,99 @@ export class DataService {
   updateOrderStatus(id: string, status: Order['status'], trackingCode?: string, provider?: string, carrierStatus?: Order['carrierStatus']) {
     this.orders.update(orders => orders.map(o => {
       if (o.id === id) {
+        // Log change
+        const newLogs = [...o.logs];
+        if (o.status !== status) {
+           newLogs.push({
+             date: new Date().toISOString(),
+             action: 'تغيير الحالة',
+             status: 'info',
+             details: `تم تغيير الحالة من ${o.status} إلى ${status}`
+           });
+        }
+        
         return { 
           ...o, 
           status, 
           trackingCode: trackingCode || o.trackingCode,
           shippingProvider: provider || o.shippingProvider,
-          carrierStatus: carrierStatus || o.carrierStatus
+          carrierStatus: carrierStatus || o.carrierStatus,
+          logs: newLogs
         };
       }
       return o;
     }));
+  }
+
+  // Simulation Logic
+  async dispatchOrderToCarrier(orderId: string, carrierId: string): Promise<{success: boolean, message: string}> {
+    const order = this.orders().find(o => o.id === orderId);
+    const carrier = this.carriers().find(c => c.id === carrierId);
+    
+    if (!order || !carrier) return { success: false, message: 'بيانات غير صحيحة' };
+
+    // Add Log: Attempting
+    this.orders.update(orders => orders.map(o => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          logs: [...o.logs, {
+            date: new Date().toISOString(),
+            action: 'محاولة إرسال',
+            status: 'info',
+            details: `جارٍ الاتصال بشركة ${carrier.name}...`
+          }]
+        };
+      }
+      return o;
+    }));
+
+    // Simulate Network Delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate Success/Fail (80% Success rate)
+    const isSuccess = Math.random() > 0.2;
+
+    if (isSuccess) {
+      const trackingCode = 'TRK-' + Math.floor(Math.random() * 1000000);
+      
+      this.orders.update(orders => orders.map(o => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            status: 'shipped',
+            carrierStatus: 'sent',
+            shippingProvider: carrier.name,
+            carrierId: carrier.id,
+            trackingCode: trackingCode,
+            logs: [...o.logs, {
+              date: new Date().toISOString(),
+              action: 'تأكيد الإرسال',
+              status: 'success',
+              details: `تم قبول الطلب. كود التتبع: ${trackingCode}`
+            }]
+          };
+        }
+        return o;
+      }));
+      return { success: true, message: 'تم الإرسال بنجاح!' };
+    } else {
+      this.orders.update(orders => orders.map(o => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            logs: [...o.logs, {
+              date: new Date().toISOString(),
+              action: 'فشل الإرسال',
+              status: 'error',
+              details: `فشل الاتصال بشركة ${carrier.name}. الخادم لا يستجيب (500).`
+            }]
+          };
+        }
+        return o;
+      }));
+      return { success: false, message: 'فشل الإرسال. راجع السجل.' };
+    }
   }
 
   // Settings Actions

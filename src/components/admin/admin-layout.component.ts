@@ -40,19 +40,24 @@ import { DataService } from '../../services/data.service';
               الطلبات
             </a>
             
-            <div class="pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">إدارة متقدمة</div>
+            <div class="pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">الشحن واللوجستيك</div>
+
+            <a routerLink="/admin/carriers" routerLinkActive="bg-emerald-600" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              شركات النقل
+            </a>
 
              <a routerLink="/admin/delivery" routerLinkActive="bg-emerald-600" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               أسعار التوصيل
             </a>
+
+            <div class="pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">إدارة المحتوى</div>
 
              <a routerLink="/admin/landing-pages" routerLinkActive="bg-emerald-600" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
               صفحات الهبوط
             </a>
-
-            <div class="pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">إدارة المحتوى</div>
             
             <a routerLink="/admin/videos" routerLinkActive="bg-emerald-600" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>

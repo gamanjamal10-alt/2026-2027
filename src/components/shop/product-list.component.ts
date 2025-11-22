@@ -110,7 +110,10 @@ export class ProductListComponent {
   selectedCategory = signal('all');
 
   categories = computed(() => {
-    const cats = new Set(this.dataService.products().map(p => p.category));
+    // Only consider categories of visible products
+    const cats = new Set(this.dataService.products()
+      .filter(p => p.isVisible)
+      .map(p => p.category));
     return Array.from(cats);
   });
 
@@ -119,6 +122,9 @@ export class ProductListComponent {
     const category = this.selectedCategory();
     
     return this.dataService.products().filter(p => {
+      // MUST be visible
+      if (!p.isVisible) return false;
+
       const matchesSearch = p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query);
       const matchesCategory = category === 'all' || p.category === category;
       return matchesSearch && matchesCategory;

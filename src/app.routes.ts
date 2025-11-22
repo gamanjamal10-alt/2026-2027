@@ -17,6 +17,7 @@ import { VideoSettingsComponent } from './components/admin/video-settings.compon
 import { AnalyticsComponent } from './components/admin/analytics.component';
 import { DeliverySettingsComponent } from './components/admin/delivery-settings.component';
 import { LandingPagesManagerComponent } from './components/admin/landing-pages-manager.component';
+import { CarriersManagerComponent } from './components/admin/carriers-manager.component';
 
 export const routes: Routes = [
   {
@@ -41,6 +42,7 @@ export const routes: Routes = [
       { path: 'products', component: ProductsManagerComponent },
       { path: 'orders', component: OrdersManagerComponent },
       { path: 'delivery', component: DeliverySettingsComponent },
+      { path: 'carriers', component: CarriersManagerComponent },
       { path: 'landing-pages', component: LandingPagesManagerComponent },
       { path: 'videos', component: VideoManagerComponent },
       { path: 'video-settings', component: VideoSettingsComponent },
