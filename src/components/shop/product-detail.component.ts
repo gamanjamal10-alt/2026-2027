@@ -1,6 +1,6 @@
 
 import { Component, inject, signal, computed } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { DataService, Product, ProductVideo } from '../../services/data.service';
 import { NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -74,16 +74,31 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
             </div>
 
             <!-- Actions -->
-            <div class="mt-auto space-y-3">
-              <button 
-                (click)="addToCart(p)" 
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-emerald-200 transition flex items-center justify-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                إضافة للسلة
-              </button>
+            <div class="mt-auto">
+              <div class="flex flex-col gap-3 mb-4">
+                <!-- Buy Now Button (Glowing & Eye Catching) -->
+                <button 
+                  (click)="buyNow(p)" 
+                  class="w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold text-xl shadow-[0_0_20px_rgba(16,185,129,0.6)] hover:shadow-[0_0_30px_rgba(16,185,129,0.8)] hover:scale-[1.02] transition-all transform flex items-center justify-center gap-2 group animate-pulse"
+                >
+                   <span class="absolute inset-0 bg-white/20 group-hover:bg-white/10 transition-colors"></span>
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                   </svg>
+                   <span class="relative">اطلب الآن فوراً</span>
+                </button>
+
+                <!-- Add to Cart (Secondary) -->
+                <button 
+                  (click)="addToCart(p)" 
+                  class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold text-lg shadow transition flex items-center justify-center gap-2 opacity-90 hover:opacity-100"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  إضافة للسلة
+                </button>
+              </div>
               
               <div class="grid grid-cols-2 gap-3 text-center text-sm text-gray-500">
                  <div class="flex items-center justify-center gap-1 bg-gray-50 py-2 rounded">
@@ -167,6 +182,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 })
 export class ProductDetailComponent {
   private route: ActivatedRoute = inject(ActivatedRoute);
+  private router: Router = inject(Router);
   dataService = inject(DataService);
   sanitizer: DomSanitizer = inject(DomSanitizer);
 
@@ -199,6 +215,11 @@ export class ProductDetailComponent {
   addToCart(p: Product) {
     this.dataService.addToCart(p, this.quantity(), this.selectedColor());
     alert('تمت الإضافة للسلة بنجاح!');
+  }
+
+  buyNow(p: Product) {
+    this.dataService.addToCart(p, this.quantity(), this.selectedColor());
+    this.router.navigate(['/checkout']);
   }
 
   getSafeUrl(url: string): SafeResourceUrl | null {
