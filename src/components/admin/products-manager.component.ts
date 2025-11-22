@@ -21,8 +21,12 @@ import { NgOptimizedImage } from '@angular/common';
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (product of dataService.products(); track product.id) {
         <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
-          <div class="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-             <img [ngSrc]="product.image" width="96" height="96" class="w-full h-full object-cover" alt="Product">
+          <div class="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative">
+             @if (product.image.startsWith('data:')) {
+                <img [src]="product.image" class="w-full h-full object-cover" alt="Product">
+             } @else {
+                <img [ngSrc]="product.image" width="96" height="96" class="w-full h-full object-cover" alt="Product">
+             }
           </div>
           <div class="flex-grow">
              <h3 class="font-bold text-gray-800 mb-1">{{ product.name }}</h3>
@@ -69,8 +73,34 @@ import { NgOptimizedImage } from '@angular/common';
              </div>
 
              <div class="mb-4">
-               <label class="block text-sm font-medium mb-1">رابط الصورة</label>
-               <input type="text" [(ngModel)]="currentProduct.image" name="image" class="w-full p-2 border rounded">
+               <label class="block text-sm font-medium mb-1">صورة المنتج</label>
+               <div class="flex gap-2 mb-2 text-sm">
+                 <button type="button" (click)="imageInputType='link'" [class]="imageInputType==='link' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'" class="flex-1 py-1 rounded border transition">رابط خارجي</button>
+                 <button type="button" (click)="imageInputType='file'" [class]="imageInputType==='file' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'" class="flex-1 py-1 rounded border transition">رفع صورة</button>
+               </div>
+
+               @if (imageInputType === 'link') {
+                 <input type="text" [(ngModel)]="currentProduct.image" name="image" placeholder="https://..." class="w-full p-2 border rounded">
+               } @else {
+                  <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
+                    <input type="file" (change)="onImageFileSelected($event)" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div class="flex flex-col items-center gap-2 text-gray-500">
+                       <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                       @if (imageUploadProgress > 0 && imageUploadProgress < 100) {
+                         <span class="text-emerald-600 font-bold">جارٍ الرفع... {{imageUploadProgress}}%</span>
+                       } @else {
+                         <span>اضغط لاختيار صورة من جهازك</span>
+                       }
+                    </div>
+                  </div>
+               }
+
+               @if (currentProduct.image) {
+                 <div class="mt-3 p-2 border rounded bg-gray-50 text-center">
+                    <p class="text-xs text-gray-500 mb-1">معاينة:</p>
+                    <img [src]="currentProduct.image" class="h-32 mx-auto object-contain rounded bg-white border" alt="Preview">
+                 </div>
+               }
              </div>
 
              <div class="mb-4">
@@ -163,6 +193,10 @@ export class ProductsManagerComponent {
   isEditing = signal(false);
   isGenerating = signal(false);
 
+  // Image UI State
+  imageInputType: 'link' | 'file' = 'link';
+  imageUploadProgress = 0;
+
   // Video UI State
   videoInputType: 'link' | 'file' = 'link';
   newVideoUrl = '';
@@ -185,14 +219,19 @@ export class ProductsManagerComponent {
     this.isEditing.set(false);
     this.currentProduct = { ...this.defaultProduct, id: Date.now().toString(), videos: [] };
     this.isModalOpen.set(true);
-    this.resetVideoForm();
+    this.resetForm();
   }
 
   editProduct(p: Product) {
     this.isEditing.set(true);
     this.currentProduct = { ...p, videos: p.videos ? [...p.videos] : [] };
     this.isModalOpen.set(true);
-    this.resetVideoForm();
+    this.resetForm();
+    
+    // Auto-detect image type
+    if (p.image && p.image.startsWith('data:')) {
+      this.imageInputType = 'file';
+    }
   }
 
   closeModal() {
@@ -222,6 +261,27 @@ export class ProductsManagerComponent {
     this.isGenerating.set(false);
   }
 
+  resetForm() {
+    this.resetVideoForm();
+    this.imageInputType = 'link';
+    this.imageUploadProgress = 0;
+  }
+
+  // Image Logic
+  onImageFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.imageUploadProgress = 10;
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imageUploadProgress = 100;
+        this.currentProduct.image = e.target.result; // Base64 string
+        setTimeout(() => this.imageUploadProgress = 0, 500);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   // Video Logic
   resetVideoForm() {
     this.newVideoUrl = '';
@@ -236,8 +296,8 @@ export class ProductsManagerComponent {
       id: 'VID-' + Date.now(),
       type: 'link',
       url: this.newVideoUrl,
-      name: 'فيديو خارجي ' + (this.currentProduct.videos?.length || 0 + 1),
-      platform: 'youtube' // simplified detection
+      name: 'فيديو خارجي ' + ((this.currentProduct.videos?.length || 0) + 1),
+      platform: 'youtube'
     };
 
     this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
@@ -247,7 +307,6 @@ export class ProductsManagerComponent {
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
-      // Simulate upload
       this.uploadProgress = 10;
       const interval = setInterval(() => {
         this.uploadProgress += 20;
@@ -257,14 +316,14 @@ export class ProductsManagerComponent {
           const newVideo: ProductVideo = {
             id: 'VID-' + Date.now(),
             type: 'file',
-            url: URL.createObjectURL(file), // Temporary blob URL for demo session
+            url: URL.createObjectURL(file), // Temporary blob URL for demo
             name: file.name,
             size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
           };
           
           this.currentProduct.videos = [...(this.currentProduct.videos || []), newVideo];
           this.uploadProgress = 0;
-          event.target.value = ''; // reset input
+          event.target.value = '';
         }
       }, 300);
     }

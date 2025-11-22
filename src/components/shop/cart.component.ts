@@ -19,7 +19,11 @@ import { NgOptimizedImage } from '@angular/common';
             @for (item of dataService.cart(); track $index) {
               <div class="p-4 flex gap-4 border-b border-gray-100 last:border-0">
                 <div class="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                   <img [ngSrc]="item.product.image" width="80" height="80" class="w-full h-full object-cover" alt="Product">
+                   @if (item.product.image.startsWith('data:')) {
+                     <img [src]="item.product.image" class="w-full h-full object-cover" alt="Product">
+                   } @else {
+                     <img [ngSrc]="item.product.image" width="80" height="80" class="w-full h-full object-cover" alt="Product">
+                   }
                 </div>
                 <div class="flex-grow">
                   <div class="flex justify-between items-start">

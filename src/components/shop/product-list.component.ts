@@ -63,7 +63,11 @@ import { NgOptimizedImage } from '@angular/common';
       @for (product of filteredProducts(); track product.id) {
         <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden group flex flex-col">
           <div class="relative aspect-[1/1] bg-gray-100 overflow-hidden">
-             <img [ngSrc]="product.image" width="300" height="300" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="{{product.name}}">
+             @if (product.image.startsWith('data:')) {
+               <img [src]="product.image" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="{{product.name}}">
+             } @else {
+               <img [ngSrc]="product.image" width="300" height="300" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="{{product.name}}">
+             }
              @if (product.discountPrice) {
                <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow">
                  تخفيض

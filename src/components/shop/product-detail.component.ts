@@ -16,7 +16,11 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
         <div class="flex flex-col md:flex-row">
           <!-- Image Side -->
           <div class="md:w-1/2 bg-gray-50 p-6 flex items-center justify-center">
-            <img [ngSrc]="p.image" width="500" height="500" priority class="max-w-full h-auto rounded-xl shadow-sm object-contain" alt="{{p.name}}">
+             @if (p.image.startsWith('data:')) {
+               <img [src]="p.image" class="max-w-full h-auto max-h-[500px] rounded-xl shadow-sm object-contain" alt="{{p.name}}">
+             } @else {
+               <img [ngSrc]="p.image" width="500" height="500" priority class="max-w-full h-auto rounded-xl shadow-sm object-contain" alt="{{p.name}}">
+             }
           </div>
 
           <!-- Info Side -->
@@ -139,7 +143,6 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
                          [class.ring-2]="activeVideo()?.id === video.id"
                          class="flex-shrink-0 w-24 h-16 bg-gray-200 rounded-lg overflow-hidden relative border-2 border-transparent ring-purple-500 hover:opacity-80 transition"
                        >
-                         <!-- Fake thumbnail logic based on type -->
                          <div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-xs">
                             {{ video.type === 'file' ? 'MP4' : 'Link' }}
                          </div>
@@ -199,7 +202,6 @@ export class ProductDetailComponent {
   }
 
   getSafeUrl(url: string): SafeResourceUrl | null {
-    // Simple check for YouTube to embed correctly
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
        let videoId = '';
        if (url.includes('v=')) videoId = url.split('v=')[1]?.split('&')[0];
@@ -210,7 +212,6 @@ export class ProductDetailComponent {
           return this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube.com/embed/${videoId}${params}`);
        }
     }
-    // Fallback for other iframes or direct links might need more complex logic
     return null;
   }
 }
